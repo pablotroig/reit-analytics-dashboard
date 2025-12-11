@@ -1,0 +1,37 @@
+[
+  {
+    "ticker": "PLD",
+    "name": "Prologis",
+    "sector": "Industrial",
+    "dividendYield": 2.5,
+    "totalReturn1Y": 8.1
+  },
+  {
+    "ticker": "O",
+    "name": "Realty Income",
+    "sector": "Retail",
+    "dividendYield": 5.0,
+    "totalReturn1Y": 3.2
+  },
+  {
+    "ticker": "AMT",
+    "name": "American Tower",
+    "sector": "Infrastructure",
+    "dividendYield": 2.0,
+    "totalReturn1Y": 6.4
+  },
+  {
+    "ticker": "VTR",
+    "name": "Ventas",
+    "sector": "Healthcare",
+    "dividendYield": 3.8,
+    "totalReturn1Y": 4.7
+  },
+  {
+    "ticker": "SPG",
+    "name": "Simon Property Group",
+    "sector": "Retail",
+    "dividendYield": 6.2,
+    "totalReturn1Y": 9.5
+  }
+]

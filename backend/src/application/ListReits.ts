@@ -3,12 +3,13 @@ import { ReitSnapshotRepository } from '../domain/ReitSnapshotRepository'
 
 /**
  * Query parameters for the ListReits use case.
- * Additional filters (minDividendYield, search, etc.)
- * will be added as the feature set grows.
+ * Additional filters (search, ranges, etc.) can be added over time.
  */
 export interface ListReitsQuery {
   sector?: string
   minDividendYield?: number
+  sortBy?: 'ticker' | 'dividendYield' | 'totalReturn1Y'
+  order?: 'asc' | 'desc'
 }
 
 /**
@@ -29,24 +30,47 @@ export class ListReits {
 
   /**
    * Executes the use case.
-   * Returns REIT snapshots sorted by ticker.
-   * Applies optional filtering when query parameters are provided.
+   *
+   * - Always returns a sorted list of REITs.
+   * - Applies optional filters (sector, minDividendYield).
+   * - Allows optional sorting by ticker, dividend yield, or 1Y total return.
    */
-  async execute(query?: ListReitsQuery): Promise<ReitSnapshot[]> {
-    const snapshots = await this._repository.findAll()
+  async execute(options?: ListReitsQuery): Promise<ReitSnapshot[]> {
+    let result = await this._repository.findAll()
 
-    let filtered = snapshots
-
-    if (query?.sector) {
-      filtered = filtered.filter((s) => s.sector === query.sector)
+    // Apply optional filtering
+    if (options?.sector) {
+      result = result.filter((r) => r.sector === options.sector)
     }
 
-    if (query?.minDividendYield !== undefined) {
-      filtered = filtered.filter(
-        (s) => s.dividendYield >= query.minDividendYield!
+    if (options?.minDividendYield !== undefined) {
+      result = result.filter(
+        (r) => r.dividendYield >= options.minDividendYield!,
       )
     }
 
-    return [...filtered].sort((a, b) => a.ticker.localeCompare(b.ticker))
+    // Apply optional sorting
+    if (options?.sortBy) {
+      const direction = options.order === 'desc' ? -1 : 1
+
+      if (options.sortBy === 'ticker') {
+        result = [...result].sort(
+          (a, b) => a.ticker.localeCompare(b.ticker) * direction,
+        )
+      } else if (options.sortBy === 'dividendYield') {
+        result = [...result].sort(
+          (a, b) => (a.dividendYield - b.dividendYield) * direction,
+        )
+      } else if (options.sortBy === 'totalReturn1Y') {
+        result = [...result].sort(
+          (a, b) => (a.totalReturn1Y - b.totalReturn1Y) * direction,
+        )
+      }
+    } else {
+      // Default sort: ticker ascending
+      result = [...result].sort((a, b) => a.ticker.localeCompare(b.ticker))
+    }
+
+    return result
   }
 }
