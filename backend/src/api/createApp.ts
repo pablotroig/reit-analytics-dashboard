@@ -8,6 +8,7 @@ import { ListReits } from '../application/ListReits'
 import { GetReitDetails } from '../application/GetReitDetails'
 import { InMemoryReitHistoryRepository } from '../infrastructure/InMemoryReitHistoryRepository'
 import { GetReitHistory } from '../application/GetReitHistory'
+import { GetReitValuation } from '../application/GetReitValuation'
 
 /**
  * Builds and configures the Express application.
@@ -24,15 +25,18 @@ export function createApp(repository: ReitSnapshotRepository) {
 
   // History repository + use case (loaded from data/history.json)
   let getReitHistory: GetReitHistory | null = null
+  let getReitValuation: GetReitValuation | null = null
   try {
     const historyFilePath = path.join(__dirname, '..', '..', 'data', 'history.json')
     const fileContents = readFileSync(historyFilePath, 'utf-8')
     const rawHistory = JSON.parse(fileContents)
     const historyRepository = new InMemoryReitHistoryRepository(rawHistory)
     getReitHistory = new GetReitHistory(repository, historyRepository)
+    getReitValuation = new GetReitValuation(repository, historyRepository)
   } catch (err) {
     console.error('Failed to initialize history repository', err)
   }
+
 
   /**
    * GET /reits
@@ -121,5 +125,45 @@ export function createApp(repository: ReitSnapshotRepository) {
     }
   })
 
+    app.post('/reits/:ticker/valuation', async (req, res) => {
+    if (!getReitValuation) {
+      return res
+        .status(500)
+        .json({ error: 'Valuation service not configured' })
+    }
+
+    const ticker = req.params.ticker.toUpperCase()
+    const { discountRate, growthRate } = req.body || {}
+
+    if (typeof discountRate !== 'number' || typeof growthRate !== 'number') {
+      return res.status(400).json({ error: 'Invalid input' })
+    }
+
+    try {
+      const result = await getReitValuation.execute({
+        ticker,
+        discountRate,
+        growthRate,
+      })
+      res.json(result)
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message === 'REIT not found') {
+          return res.status(404).json({ error: 'REIT not found' })
+        }
+        if (err.message === 'No price history for valuation') {
+          return res
+            .status(404)
+            .json({ error: 'No price history available' })
+        }
+        if (err.message === 'Invalid discount or growth rate') {
+          return res.status(400).json({ error: err.message })
+        }
+      }
+
+      console.error(err)
+      res.status(500).json({ error: 'Failed to calculate valuation' })
+    }
+  })
   return app
 }
